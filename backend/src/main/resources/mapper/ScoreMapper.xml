@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreMapper">
+
+    <!--
+      单班级单科目的统计指标：人数、平均分、中位数、标准差、及格率（>=60）。
+      中位数：使用 ROW_NUMBER + COUNT 窗口函数定位中间位置（偶数取两中位平均）。
+      所有统计在 SQL 完成，禁止在 Java 层循环计算。
+    -->
+    <select id="selectClassStats" resultType="java.util.Map">
+        SELECT
+            agg.student_count   AS studentCount,
+            agg.avg_score       AS avgScore,
+            agg.std_dev         AS stdDev,
+            agg.pass_rate       AS passRate,
+            med.median_score    AS medianScore
+        FROM (
+            SELECT
+                COUNT(s.id) AS student_count,
+                ROUND(AVG(s.score), 2) AS avg_score,
+                ROUND(STDDEV_SAMP(s.score), 2) AS std_dev,
+                ROUND(SUM(CASE WHEN s.score &gt;= 60 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(s.id), 0), 2) AS pass_rate
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id AND st.deleted = 0
+            WHERE st.class_id = #{classId}
+              AND s.course_id = #{courseId}
+        ) agg
+        CROSS JOIN (
+            SELECT ROUND(AVG(t.score), 2) AS median_score
+            FROM (
+                SELECT s.score,
+                       ROW_NUMBER() OVER (ORDER BY s.score) AS rn,
+                       COUNT(*)     OVER ()                 AS cnt
+                FROM score s
+                INNER JOIN student st ON s.student_id = st.id AND st.deleted = 0
+                WHERE st.class_id = #{classId}
+                  AND s.course_id = #{courseId}
+            ) t
+            WHERE t.rn IN (FLOOR((t.cnt + 1) / 2), CEIL((t.cnt + 1) / 2))
+        ) med
+    </select>
+
+</mapper>
