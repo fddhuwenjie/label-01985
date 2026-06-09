@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreMapper">
+
+    <select id="selectStudentScoreTrend" resultType="java.util.Map">
+        SELECT
+            s.semester AS semester,
+            s.create_time AS examTime,
+            c.id AS courseId,
+            c.course_name AS courseName,
+            s.score AS score
+        FROM score s
+        INNER JOIN course c ON s.course_id = c.id
+        WHERE s.student_id = #{studentId}
+        <if test="courseId != null">
+            AND s.course_id = #{courseId}
+        </if>
+        <if test="courseName != null and courseName != ''">
+            AND c.course_name = #{courseName}
+        </if>
+        ORDER BY s.create_time ASC
+    </select>
+
+    <select id="selectClassScoreComparison" resultType="java.util.Map">
+        WITH class1_scores AS (
+            SELECT s.score
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id
+            WHERE s.course_id = #{courseId}
+              AND st.class_id = #{class1Id}
+              AND s.score IS NOT NULL
+        ),
+        class1_ranked AS (
+            SELECT score,
+                   ROW_NUMBER() OVER (ORDER BY score) AS rn,
+                   COUNT(*) OVER () AS total
+            FROM class1_scores
+        ),
+        class1_median AS (
+            SELECT AVG(score) AS medianScore
+            FROM class1_ranked
+            WHERE rn IN (FLOOR((total + 1) / 2), CEIL((total + 1) / 2))
+        ),
+        class1_stats AS (
+            SELECT
+                'class1' AS classTag,
+                ci.id AS classId,
+                ci.class_name AS className,
+                COUNT(s.id) AS studentCount,
+                AVG(s.score) AS avgScore,
+                STDDEV(s.score) AS stdDevScore,
+                SUM(CASE WHEN s.score >= 60 THEN 1 ELSE 0 END) / COUNT(s.score) * 100 AS passRate
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id
+            INNER JOIN class_info ci ON st.class_id = ci.id
+            WHERE s.course_id = #{courseId}
+              AND ci.id = #{class1Id}
+              AND s.score IS NOT NULL
+            GROUP BY ci.id, ci.class_name
+        ),
+        class2_scores AS (
+            SELECT s.score
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id
+            WHERE s.course_id = #{courseId}
+              AND st.class_id = #{class2Id}
+              AND s.score IS NOT NULL
+        ),
+        class2_ranked AS (
+            SELECT score,
+                   ROW_NUMBER() OVER (ORDER BY score) AS rn,
+                   COUNT(*) OVER () AS total
+            FROM class2_scores
+        ),
+        class2_median AS (
+            SELECT AVG(score) AS medianScore
+            FROM class2_ranked
+            WHERE rn IN (FLOOR((total + 1) / 2), CEIL((total + 1) / 2))
+        ),
+        class2_stats AS (
+            SELECT
+                'class2' AS classTag,
+                ci.id AS classId,
+                ci.class_name AS className,
+                COUNT(s.id) AS studentCount,
+                AVG(s.score) AS avgScore,
+                STDDEV(s.score) AS stdDevScore,
+                SUM(CASE WHEN s.score >= 60 THEN 1 ELSE 0 END) / COUNT(s.score) * 100 AS passRate
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id
+            INNER JOIN class_info ci ON st.class_id = ci.id
+            WHERE s.course_id = #{courseId}
+              AND ci.id = #{class2Id}
+              AND s.score IS NOT NULL
+            GROUP BY ci.id, ci.class_name
+        )
+        SELECT cs.*, cm.medianScore
+        FROM class1_stats cs, class1_median cm
+        UNION ALL
+        SELECT cs.*, cm.medianScore
+        FROM class2_stats cs, class2_median cm
+    </select>
+
+    <select id="selectScoreDropsForAlert" resultType="java.util.Map">
+        <![CDATA[
+        SELECT
+            s1.student_id AS studentId,
+            st.name AS studentName,
+            c1.id AS courseId,
+            c1.course_name AS courseName,
+            s2.score AS prevScore,
+            s1.score AS currentScore,
+            (s2.score - s1.score) AS dropAmount
+        FROM score s1
+        INNER JOIN score s2 ON s1.student_id = s2.student_id
+        INNER JOIN course c1 ON s1.course_id = c1.id
+        INNER JOIN course c2 ON s2.course_id = c2.id AND c1.course_name = c2.course_name
+        INNER JOIN student st ON s1.student_id = st.id
+        WHERE s1.create_time > s2.create_time
+          AND s1.score IS NOT NULL
+          AND s2.score IS NOT NULL
+          AND (s2.score - s1.score) > #{threshold}
+          AND NOT EXISTS (
+              SELECT 1 FROM score s3
+              INNER JOIN course c3 ON s3.course_id = c3.id
+              WHERE s3.student_id = s1.student_id
+                AND c3.course_name = c1.course_name
+                AND s3.create_time > s2.create_time
+                AND s3.create_time < s1.create_time
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM score_alert sa
+              WHERE sa.student_id = s1.student_id
+                AND sa.course_id = c1.id
+                AND sa.prev_score = s2.score
+                AND sa.current_score = s1.score
+          )
+        ]]>
+    </select>
+
+</mapper>
