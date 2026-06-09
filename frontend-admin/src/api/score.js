@@ -10,3 +10,5 @@ export const exportScore = (semester) => request.get('/score/export', {
   params: { semester },
   responseType: 'blob'
 })
+export const getScoreTrend = (params) => request.get('/score/trend', { params })
+export const getClassComparison = (params) => request.get('/score/class-compare', { params })

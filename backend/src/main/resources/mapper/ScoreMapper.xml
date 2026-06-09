@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreMapper">
+
+    <select id="selectClassStats" resultType="java.util.Map">
+        SELECT
+            ci.id AS classId,
+            ci.class_name AS className,
+            ROUND(AVG(s.score), 2) AS avgScore,
+            (SELECT ROUND(AVG(sub_score), 2) FROM (
+                SELECT s2.score AS sub_score,
+                       ROW_NUMBER() OVER (ORDER BY s2.score) AS rn,
+                       COUNT(*) OVER () AS cnt
+                FROM score s2
+                INNER JOIN student st2 ON s2.student_id = st2.id
+                WHERE st2.class_id = #{classId} AND s2.course_id = #{courseId}
+            ) sub WHERE sub.rn IN (FLOOR((sub.cnt + 1) / 2), CEIL((sub.cnt + 1) / 2))) AS medianScore,
+            ROUND(STDDEV(s.score), 2) AS stdDev,
+            ROUND(SUM(CASE WHEN s.score >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(s.id), 2) AS passRate
+        FROM score s
+        INNER JOIN student st ON s.student_id = st.id
+        INNER JOIN class_info ci ON st.class_id = ci.id
+        WHERE st.class_id = #{classId} AND s.course_id = #{courseId}
+    </select>
+
+    <select id="selectScoreDropAlerts" resultType="java.util.Map">
+        SELECT t.student_id, st.name AS studentName, c.course_name AS courseName,
+               c.id AS courseId, t.prev_score AS previousScore, t.current_score AS currentScore,
+               (t.prev_score - t.current_score) AS dropAmount, t.semester
+        FROM (
+            SELECT s.student_id, s.course_id, s.score AS current_score,
+                   LAG(s.score) OVER (PARTITION BY s.student_id, s.course_id ORDER BY s.semester) AS prev_score,
+                   s.semester
+            FROM score s
+        ) t
+        INNER JOIN student st ON t.student_id = st.id
+        INNER JOIN course c ON t.course_id = c.id
+        WHERE t.prev_score IS NOT NULL
+          AND (t.prev_score - t.current_score) > 15
+          AND NOT EXISTS (
+              SELECT 1 FROM score_alert sa
+              WHERE sa.student_id = t.student_id AND sa.course_id = t.course_id
+              AND sa.semester = t.semester
+          )
+    </select>
+
+</mapper>

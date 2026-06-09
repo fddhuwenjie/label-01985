@@ -92,4 +92,17 @@ public class ScoreService extends ServiceImpl<ScoreMapper, Score> {
                 score.getScore() != null ? score.getScore().doubleValue() : 0);
         webSocketHandler.broadcastMessage(type, message);
     }
+
+    public List<Map<String, Object>> getStudentScoreTrend(Long studentId, Long courseId) {
+        return baseMapper.selectStudentScoreTrend(studentId, courseId);
+    }
+
+    public Map<String, Object> getClassComparison(Long classId1, Long classId2, Long courseId) {
+        Map<String, Object> class1Stats = baseMapper.selectClassStats(classId1, courseId);
+        Map<String, Object> class2Stats = baseMapper.selectClassStats(classId2, courseId);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("class1", class1Stats);
+        result.put("class2", class2Stats);
+        return result;
+    }
 }

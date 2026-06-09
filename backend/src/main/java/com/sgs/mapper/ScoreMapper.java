@@ -1,6 +1,7 @@
 package com.sgs.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.sgs.entity.Score;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -21,4 +22,19 @@ public interface ScoreMapper extends BaseMapper<Score> {
             "WHERE s.semester = #{semester} GROUP BY st.id, st.name, st.student_no " +
             "ORDER BY totalScore DESC")
     List<Map<String, Object>> selectStudentRanking(@Param("semester") String semester);
+
+    @Select("<script>" +
+            "SELECT s.semester, c.course_name AS courseName, c.id AS courseId, s.score " +
+            "FROM score s INNER JOIN course c ON s.course_id = c.id " +
+            "WHERE s.student_id = #{studentId} " +
+            "<if test='courseId != null'> AND s.course_id = #{courseId} </if>" +
+            "ORDER BY s.semester ASC, c.id ASC" +
+            "</script>")
+    List<Map<String, Object>> selectStudentScoreTrend(@Param("studentId") Long studentId,
+                                                       @Param("courseId") Long courseId);
+
+    Map<String, Object> selectClassStats(@Param("classId") Long classId,
+                                          @Param("courseId") Long courseId);
+
+    List<Map<String, Object>> selectScoreDropAlerts();
 }
