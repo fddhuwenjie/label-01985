@@ -27,10 +27,28 @@
           <el-icon><Document /></el-icon>
           <span>成绩管理</span>
         </el-menu-item>
-        <el-menu-item index="/analysis">
-          <el-icon><TrendCharts /></el-icon>
-          <span>成绩分析</span>
-        </el-menu-item>
+        <el-sub-menu index="/analysis-menu">
+          <template #title>
+            <el-icon><TrendCharts /></el-icon>
+            <span>成绩分析</span>
+          </template>
+          <el-menu-item index="/analysis">
+            <el-icon><PieChart /></el-icon>
+            <span>总体分析</span>
+          </el-menu-item>
+          <el-menu-item index="/trend">
+            <el-icon><TrendCharts /></el-icon>
+            <span>成绩趋势</span>
+          </el-menu-item>
+          <el-menu-item index="/comparison">
+            <el-icon><ScaleToOriginal /></el-icon>
+            <span>班级对比</span>
+          </el-menu-item>
+          <el-menu-item index="/alert">
+            <el-icon><Warning /></el-icon>
+            <span>成绩预警</span>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-aside>
     <el-container>
@@ -102,6 +120,8 @@ const connectWebSocket = () => {
         ElNotification.success({ title: '统计完成', message: data.content, duration: 5000 })
       } else if (data.type === 'SCORE_IMPORT') {
         ElNotification.success({ title: '批量导入', message: data.content, duration: 5000 })
+      } else if (data.type === 'SCORE_ALERT' || data.type === 'SCORE_ALERT_DETECTED') {
+        ElNotification.warning({ title: '成绩预警', message: data.content, duration: 8000 })
       }
     } catch (e) {
       console.error('消息解析失败', e)

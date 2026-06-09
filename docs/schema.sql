@@ -333,6 +333,28 @@ INSERT INTO score (student_id, course_id, score, semester) VALUES
 (15, 1, 94.0, '2024-2025-1'), (15, 2, 96.0, '2024-2025-1'), (15, 3, 93.0, '2024-2025-1'),
 (15, 4, 98.0, '2024-2025-1'), (15, 11, 95.5, '2024-2025-1');
 
+-- 成绩预警表
+DROP TABLE IF EXISTS score_alert;
+CREATE TABLE score_alert (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    student_id BIGINT NOT NULL COMMENT '学生ID',
+    student_name VARCHAR(50) NOT NULL COMMENT '学生姓名',
+    course_id BIGINT NOT NULL COMMENT '课程ID',
+    course_name VARCHAR(100) NOT NULL COMMENT '课程名称',
+    prev_score DECIMAL(5,2) DEFAULT NULL COMMENT '上次成绩',
+    current_score DECIMAL(5,2) DEFAULT NULL COMMENT '本次成绩',
+    drop_amount DECIMAL(5,2) DEFAULT NULL COMMENT '下降幅度',
+    alert_level VARCHAR(20) NOT NULL DEFAULT 'WARNING' COMMENT '预警等级 WARNING/MEDIUM/SEVERE',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '状态 0-未处理 1-已处理',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_student_id (student_id),
+    KEY idx_course_id (course_id),
+    KEY idx_status (status),
+    KEY idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='成绩预警表';
+
 -- 成绩数据（2024-2025-2学期）
 INSERT INTO score (student_id, course_id, score, semester) VALUES
 (1, 6, 90.0, '2024-2025-2'), (1, 7, 85.5, '2024-2025-2'), (1, 8, 93.0, '2024-2025-2'),

@@ -16,7 +16,10 @@ const routes = [
       { path: 'teacher', name: 'Teacher', component: () => import('@/views/TeacherManage.vue'), meta: { title: '教师管理' } },
       { path: 'course', name: 'Course', component: () => import('@/views/CourseManage.vue'), meta: { title: '课程管理' } },
       { path: 'score', name: 'Score', component: () => import('@/views/ScoreManage.vue'), meta: { title: '成绩管理' } },
-      { path: 'analysis', name: 'Analysis', component: () => import('@/views/ScoreAnalysis.vue'), meta: { title: '成绩分析' } }
+      { path: 'analysis', name: 'Analysis', component: () => import('@/views/ScoreAnalysis.vue'), meta: { title: '成绩分析' } },
+      { path: 'trend', name: 'ScoreTrend', component: () => import('@/views/ScoreTrend.vue'), meta: { title: '成绩趋势' } },
+      { path: 'alert', name: 'ScoreAlert', component: () => import('@/views/ScoreAlert.vue'), meta: { title: '成绩预警' } },
+      { path: 'comparison', name: 'ClassComparison', component: () => import('@/views/ClassComparison.vue'), meta: { title: '班级对比' } }
     ]
   }
 ]
