@@ -83,6 +83,19 @@ public class ScoreService extends ServiceImpl<ScoreMapper, Score> {
         }
     }
 
+    public List<Map<String, Object>> getStudentScoreTrend(Long studentId, Long courseId) {
+        return baseMapper.selectStudentScoreTrend(studentId, courseId);
+    }
+
+    public Map<String, Object> compareClasses(Long classId1, Long classId2, Long courseId) {
+        Map<String, Object> class1 = baseMapper.selectClassCompareStats(classId1, courseId);
+        Map<String, Object> class2 = baseMapper.selectClassCompareStats(classId2, courseId);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("class1", class1);
+        result.put("class2", class2);
+        return result;
+    }
+
     /**
      * 发送成绩变更通知
      */

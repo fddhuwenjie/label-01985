@@ -346,3 +346,74 @@ INSERT INTO score (student_id, course_id, score, semester) VALUES
 (11, 6, 89.0, '2024-2025-2'), (11, 7, 86.0, '2024-2025-2'), (11, 9, 92.0, '2024-2025-2'),
 (12, 6, 75.0, '2024-2025-2'), (12, 7, 72.0, '2024-2025-2'), (12, 9, 77.5, '2024-2025-2'),
 (13, 6, 88.0, '2024-2025-2'), (13, 7, 90.5, '2024-2025-2'), (13, 9, 87.0, '2024-2025-2');
+
+-- ============================================
+-- 成绩趋势分析与预警模块新增
+-- ============================================
+
+-- 给 score 表增加考试名称和考试时间字段（支持历次考试）
+ALTER TABLE score ADD COLUMN exam_name VARCHAR(100) DEFAULT NULL COMMENT '考试名称' AFTER semester;
+ALTER TABLE score ADD COLUMN exam_time DATETIME DEFAULT NULL COMMENT '考试时间' AFTER exam_name;
+ALTER TABLE score DROP INDEX uk_student_course;
+ALTER TABLE score ADD UNIQUE KEY uk_student_course_exam (student_id, course_id, exam_name);
+
+-- 成绩预警表
+DROP TABLE IF EXISTS score_alert;
+CREATE TABLE score_alert (
+    id BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    student_id BIGINT NOT NULL COMMENT '学生ID',
+    student_name VARCHAR(50) NOT NULL COMMENT '学生姓名',
+    course_id BIGINT NOT NULL COMMENT '课程ID',
+    course_name VARCHAR(100) NOT NULL COMMENT '课程名称',
+    previous_score DECIMAL(5,2) DEFAULT NULL COMMENT '上次成绩',
+    current_score DECIMAL(5,2) DEFAULT NULL COMMENT '本次成绩',
+    drop_amount DECIMAL(5,2) DEFAULT NULL COMMENT '下降幅度',
+    alert_level VARCHAR(20) NOT NULL DEFAULT 'YELLOW' COMMENT '预警等级 YELLOW/ORANGE/RED',
+    status TINYINT NOT NULL DEFAULT 0 COMMENT '处理状态 0-未处理 1-已处理',
+    remark VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id),
+    KEY idx_student_id (student_id),
+    KEY idx_status (status),
+    KEY idx_alert_level (alert_level)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='成绩预警记录表';
+
+-- 初始化已有成绩数据的考试名称和时间（将现有数据视为"期末考试"）
+UPDATE score SET exam_name = '期末考试', exam_time = create_time WHERE exam_name IS NULL;
+
+-- 为同一批学生添加多次考试数据，构造连续下降场景以触发预警
+-- 学生赵磊(id=6) 高等数学(id=1)：第一次月考85，期中70，期末52（连续下降超15分）
+INSERT INTO score (student_id, course_id, score, semester, exam_name, exam_time) VALUES
+(6, 1, 85.0, '2024-2025-1', '第一次月考', '2024-09-25 10:00:00'),
+(6, 1, 70.0, '2024-2025-1', '期中考试', '2024-11-10 14:00:00');
+
+-- 更新赵磊的高等数学期末成绩原为65，现改为52以形成连续下降
+UPDATE score SET score = 52.0, exam_name = '期末考试', exam_time = '2025-01-05 09:00:00'
+WHERE student_id = 6 AND course_id = 1 AND exam_name IS NULL;
+
+-- 学生马超(id=14) 数据结构(id=4)：月考80，期中62，期末45（连续下降超15分）
+INSERT INTO score (student_id, course_id, score, semester, exam_name, exam_time) VALUES
+(14, 4, 80.0, '2024-2025-1', '第一次月考', '2024-09-26 10:00:00'),
+(14, 4, 62.0, '2024-2025-1', '期中考试', '2024-11-11 14:00:00'),
+(14, 4, 45.0, '2024-2025-1', '期末考试', '2025-01-06 09:00:00');
+
+-- 学生周杰(id=8) 线性代数(id=2)：月考88，期中70，期末53（连续下降）
+INSERT INTO score (student_id, course_id, score, semester, exam_name, exam_time) VALUES
+(8, 2, 88.0, '2024-2025-1', '第一次月考', '2024-09-27 10:00:00'),
+(8, 2, 70.0, '2024-2025-1', '期中考试', '2024-11-12 14:00:00'),
+(8, 2, 53.0, '2024-2025-1', '期末考试', '2025-01-07 09:00:00');
+
+-- 为陈静(id=5)添加多次考试成绩（稳定优秀，不触发预警）用于趋势图展示
+INSERT INTO score (student_id, course_id, score, semester, exam_name, exam_time) VALUES
+(5, 1, 93.0, '2024-2025-1', '第一次月考', '2024-09-25 10:00:00'),
+(5, 1, 96.0, '2024-2025-1', '期中考试', '2024-11-10 14:00:00'),
+(5, 4, 94.0, '2024-2025-1', '第一次月考', '2024-09-26 10:00:00'),
+(5, 4, 98.0, '2024-2025-1', '期中考试', '2024-11-11 14:00:00');
+
+-- 为王明(id=1)添加多次考试数据
+INSERT INTO score (student_id, course_id, score, semester, exam_name, exam_time) VALUES
+(1, 1, 90.0, '2024-2025-1', '第一次月考', '2024-09-25 10:00:00'),
+(1, 1, 94.0, '2024-2025-1', '期中考试', '2024-11-10 14:00:00'),
+(1, 4, 92.0, '2024-2025-1', '第一次月考', '2024-09-26 10:00:00'),
+(1, 4, 96.0, '2024-2025-1', '期中考试', '2024-11-11 14:00:00');

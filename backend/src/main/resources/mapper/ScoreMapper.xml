@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreMapper">
+
+    <select id="selectStudentScoreTrend" resultType="java.util.Map">
+        SELECT
+            s.id,
+            s.student_id AS studentId,
+            s.course_id AS courseId,
+            c.course_name AS courseName,
+            s.score,
+            s.semester,
+            s.exam_name AS examName,
+            s.exam_time AS examTime
+        FROM score s
+        INNER JOIN course c ON s.course_id = c.id
+        WHERE s.student_id = #{studentId}
+        <if test="courseId != null">
+            AND s.course_id = #{courseId}
+        </if>
+        ORDER BY s.exam_time ASC, s.create_time ASC
+    </select>
+
+    <select id="detectScoreDrops" resultType="java.util.Map">
+        SELECT
+            t.student_id AS studentId,
+            st.name AS studentName,
+            t.course_id AS courseId,
+            c.course_name AS courseName,
+            t.previous_score AS previousScore,
+            t.current_score AS currentScore,
+            (t.previous_score - t.current_score) AS dropAmount,
+            CASE
+                WHEN (t.previous_score - t.current_score) >= 30 THEN 'RED'
+                WHEN (t.previous_score - t.current_score) >= 20 THEN 'ORANGE'
+                ELSE 'YELLOW'
+            END AS alertLevel
+        FROM (
+            SELECT
+                student_id,
+                course_id,
+                score AS current_score,
+                LAG(score, 1) OVER (PARTITION BY student_id, course_id ORDER BY exam_time, create_time) AS previous_score
+            FROM score
+        ) t
+        INNER JOIN student st ON t.student_id = st.id
+        INNER JOIN course c ON t.course_id = c.id
+        WHERE t.previous_score IS NOT NULL
+          AND (t.previous_score - t.current_score) > 15
+        ORDER BY (t.previous_score - t.current_score) DESC
+    </select>
+
+    <select id="selectClassCompareStats" resultType="java.util.Map">
+        SELECT
+            #{classId} AS classId,
+            COUNT(*) AS studentCount,
+            ROUND(AVG(t.score), 2) AS avgScore,
+            ROUND(AVG(CASE WHEN t.rn IN (t.cnt DIV 2 + 1, (t.cnt + 1) DIV 2) THEN t.score END), 2) AS medianScore,
+            ROUND(STDDEV(t.score), 2) AS stdDev,
+            ROUND(SUM(CASE WHEN t.score >= 60 THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) AS passRate,
+            MAX(t.score) AS maxScore,
+            MIN(t.score) AS minScore
+        FROM (
+            SELECT
+                s.score,
+                ROW_NUMBER() OVER (ORDER BY s.score) AS rn,
+                COUNT(*) OVER () AS cnt
+            FROM score s
+            INNER JOIN student st ON s.student_id = st.id
+            WHERE st.class_id = #{classId}
+              AND s.course_id = #{courseId}
+        ) t
+    </select>
+
+</mapper>
