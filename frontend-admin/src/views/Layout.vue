@@ -31,6 +31,18 @@
           <el-icon><TrendCharts /></el-icon>
           <span>成绩分析</span>
         </el-menu-item>
+        <el-menu-item index="/trend">
+          <el-icon><DataLine /></el-icon>
+          <span>成绩趋势</span>
+        </el-menu-item>
+        <el-menu-item index="/alert">
+          <el-icon><Warning /></el-icon>
+          <span>成绩预警</span>
+        </el-menu-item>
+        <el-menu-item index="/class-compare">
+          <el-icon><Histogram /></el-icon>
+          <span>班级对比</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>
