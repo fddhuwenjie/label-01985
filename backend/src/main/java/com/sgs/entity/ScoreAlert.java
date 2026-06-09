@@ -6,16 +6,20 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("score")
-public class Score {
+@TableName("score_alert")
+public class ScoreAlert {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long studentId;
+    private String studentName;
     private Long courseId;
-    private BigDecimal score;
-    private String semester;
-    private String examName;
-    private LocalDateTime examTime;
+    private String courseName;
+    private BigDecimal previousScore;
+    private BigDecimal currentScore;
+    private BigDecimal dropAmount;
+    private String alertLevel;
+    private Integer status;
+    private String remark;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)
