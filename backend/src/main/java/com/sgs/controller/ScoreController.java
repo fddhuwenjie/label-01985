@@ -93,4 +93,22 @@ public class ScoreController {
     public Result<Long> count() {
         return Result.success(scoreService.count());
     }
+
+    @ApiOperation("学生成绩趋势分析")
+    @GetMapping("/trend/{studentId}")
+    public Result<List<Map<String, Object>>> getStudentTrend(
+            @PathVariable Long studentId,
+            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) String courseName) {
+        return Result.success(scoreService.getStudentScoreTrend(studentId, courseId, courseName));
+    }
+
+    @ApiOperation("班级成绩对比")
+    @GetMapping("/class-compare")
+    public Result<List<Map<String, Object>>> getClassComparison(
+            @RequestParam Long class1Id,
+            @RequestParam Long class2Id,
+            @RequestParam Long courseId) {
+        return Result.success(scoreService.getClassScoreComparison(class1Id, class2Id, courseId));
+    }
 }

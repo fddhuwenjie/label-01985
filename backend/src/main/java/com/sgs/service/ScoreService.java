@@ -88,8 +88,16 @@ public class ScoreService extends ServiceImpl<ScoreMapper, Score> {
      */
     public void notifyScoreChange(String type, Score score) {
         String message = String.format("成绩变更: 学生ID=%d, 课程ID=%d, 分数=%.1f",
-                score.getStudentId(), score.getCourseId(), 
+                score.getStudentId(), score.getCourseId(),
                 score.getScore() != null ? score.getScore().doubleValue() : 0);
         webSocketHandler.broadcastMessage(type, message);
+    }
+
+    public List<Map<String, Object>> getStudentScoreTrend(Long studentId, Long courseId, String courseName) {
+        return baseMapper.selectStudentScoreTrend(studentId, courseId, courseName);
+    }
+
+    public List<Map<String, Object>> getClassScoreComparison(Long class1Id, Long class2Id, Long courseId) {
+        return baseMapper.selectClassScoreComparison(class1Id, class2Id, courseId);
     }
 }
