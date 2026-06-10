@@ -31,6 +31,10 @@
           <el-icon><TrendCharts /></el-icon>
           <span>成绩分析</span>
         </el-menu-item>
+        <el-menu-item index="/alert">
+          <el-icon><Warning /></el-icon>
+          <span>成绩预警</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     <el-container>

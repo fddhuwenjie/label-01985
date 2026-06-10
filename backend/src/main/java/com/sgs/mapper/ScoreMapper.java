@@ -21,4 +21,14 @@ public interface ScoreMapper extends BaseMapper<Score> {
             "WHERE s.semester = #{semester} GROUP BY st.id, st.name, st.student_no " +
             "ORDER BY totalScore DESC")
     List<Map<String, Object>> selectStudentRanking(@Param("semester") String semester);
+
+    List<Map<String, Object>> selectStudentScoreTrend(@Param("studentId") Long studentId,
+                                                      @Param("courseId") Long courseId,
+                                                      @Param("courseName") String courseName);
+
+    List<Map<String, Object>> selectClassScoreComparison(@Param("class1Id") Long class1Id,
+                                                          @Param("class2Id") Long class2Id,
+                                                          @Param("courseId") Long courseId);
+
+    List<Map<String, Object>> selectConsecutiveScoreDrops(@Param("threshold") Double threshold);
 }

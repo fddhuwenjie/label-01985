@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreMapper">
+
+    <select id="selectStudentScoreTrend" resultType="java.util.Map">
+        SELECT
+            s.semester AS semester,
+            s.create_time AS examTime,
+            c.id AS courseId,
+            c.course_name AS courseName,
+            s.score AS score
+        FROM score s
+        INNER JOIN course c ON s.course_id = c.id
+        WHERE s.student_id = #{studentId}
+        <if test="courseId != null">
+            AND s.course_id = #{courseId}
+        </if>
+        <if test="courseName != null and courseName != ''">
+            AND c.course_name = #{courseName}
+        </if>
+        ORDER BY s.create_time ASC
+    </select>
+
+    <select id="selectClassScoreComparison" resultType="java.util.Map">
+        SELECT
+            'class1' AS classTag,
+            ci.id AS classId,
+            ci.class_name AS className,
+            COUNT(s.id) AS studentCount,
+            AVG(s.score) AS avgScore,
+            (
+                SELECT AVG(score) FROM (
+                    SELECT score FROM score s2
+                    INNER JOIN student st2 ON s2.student_id = st2.id
+                    WHERE s2.course_id = #{courseId}
+                      AND st2.class_id = ci.id
+                      AND s2.score IS NOT NULL
+                    ORDER BY score
+                    LIMIT 2 - (SELECT COUNT(*) FROM score s3
+                               INNER JOIN student st3 ON s3.student_id = st3.id
+                               WHERE s3.course_id = #{courseId}
+                                 AND st3.class_id = ci.id
+                                 AND s3.score IS NOT NULL) % 2
+                    OFFSET (SELECT (COUNT(*) - 1) / 2 FROM score s4
+                            INNER JOIN student st4 ON s4.student_id = st4.id
+                            WHERE s4.course_id = #{courseId}
+                              AND st4.class_id = ci.id
+                              AND s4.score IS NOT NULL)
+                ) AS mid
+            ) AS medianScore,
+            STDDEV(s.score) AS stdDevScore,
+            SUM(CASE WHEN s.score >= 60 THEN 1 ELSE 0 END) / COUNT(s.score) * 100 AS passRate
+        FROM score s
+        INNER JOIN student st ON s.student_id = st.id
+        INNER JOIN class_info ci ON st.class_id = ci.id
+        WHERE s.course_id = #{courseId}
+          AND ci.id = #{class1Id}
+          AND s.score IS NOT NULL
+        GROUP BY ci.id, ci.class_name
+
+        UNION ALL
+
+        SELECT
+            'class2' AS classTag,
+            ci.id AS classId,
+            ci.class_name AS className,
+            COUNT(s.id) AS studentCount,
+            AVG(s.score) AS avgScore,
+            (
+                SELECT AVG(score) FROM (
+                    SELECT score FROM score s2
+                    INNER JOIN student st2 ON s2.student_id = st2.id
+                    WHERE s2.course_id = #{courseId}
+                      AND st2.class_id = ci.id
+                      AND s2.score IS NOT NULL
+                    ORDER BY score
+                    LIMIT 2 - (SELECT COUNT(*) FROM score s3
+                               INNER JOIN student st3 ON s3.student_id = st3.id
+                               WHERE s3.course_id = #{courseId}
+                                 AND st3.class_id = ci.id
+                                 AND s3.score IS NOT NULL) % 2
+                    OFFSET (SELECT (COUNT(*) - 1) / 2 FROM score s4
+                            INNER JOIN student st4 ON s4.student_id = st4.id
+                            WHERE s4.course_id = #{courseId}
+                              AND st4.class_id = ci.id
+                              AND s4.score IS NOT NULL)
+                ) AS mid
+            ) AS medianScore,
+            STDDEV(s.score) AS stdDevScore,
+            SUM(CASE WHEN s.score >= 60 THEN 1 ELSE 0 END) / COUNT(s.score) * 100 AS passRate
+        FROM score s
+        INNER JOIN student st ON s.student_id = st.id
+        INNER JOIN class_info ci ON st.class_id = ci.id
+        WHERE s.course_id = #{courseId}
+          AND ci.id = #{class2Id}
+          AND s.score IS NOT NULL
+        GROUP BY ci.id, ci.class_name
+    </select>
+
+    <select id="selectConsecutiveScoreDrops" resultType="java.util.Map">
+        SELECT
+            s_curr.student_id AS studentId,
+            st.name AS studentName,
+            c.id AS courseId,
+            c.course_name AS courseName,
+            s_prev.score AS prevScore,
+            s_curr.score AS currScore,
+            (s_prev.score - s_curr.score) AS dropScore,
+            s_curr.semester AS semester,
+            CASE
+                WHEN (s_prev.score - s_curr.score) >= 30 THEN 'DANGER'
+                WHEN (s_prev.score - s_curr.score) >= 20 THEN 'WARNING'
+                ELSE 'NORMAL'
+            END AS alertLevel
+        FROM score s_curr
+        INNER JOIN score s_prev
+            ON s_curr.student_id = s_prev.student_id
+            AND s_curr.course_id = s_prev.course_id
+            AND s_curr.create_time > s_prev.create_time
+        INNER JOIN course c ON s_curr.course_id = c.id
+        INNER JOIN student st ON s_curr.student_id = st.id
+        WHERE (s_prev.score - s_curr.score) > #{threshold}
+          AND s_curr.score IS NOT NULL
+          AND s_prev.score IS NOT NULL
+          AND NOT EXISTS (
+              SELECT 1 FROM score s_mid
+              WHERE s_mid.student_id = s_curr.student_id
+                AND s_mid.course_id = s_curr.course_id
+                AND s_mid.create_time > s_prev.create_time
+                AND s_mid.create_time < s_curr.create_time
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM score_alert sa
+              WHERE sa.student_id = s_curr.student_id
+                AND sa.course_id = s_curr.course_id
+                AND sa.prev_score = s_prev.score
+                AND sa.curr_score = s_curr.score
+                AND sa.status = 0
+          )
+    </select>
+
+</mapper>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sgs.mapper.ScoreAlertMapper">
+
+    <select id="selectAlertList" resultType="java.util.Map">
+        SELECT
+            sa.id,
+            sa.student_id AS studentId,
+            sa.student_name AS studentName,
+            sa.course_id AS courseId,
+            sa.course_name AS courseName,
+            sa.prev_score AS prevScore,
+            sa.curr_score AS currScore,
+            sa.drop_score AS dropScore,
+            sa.alert_level AS alertLevel,
+            sa.status,
+            sa.semester,
+            sa.handle_remark AS handleRemark,
+            sa.create_time AS createTime,
+            sa.update_time AS updateTime,
+            s.student_no AS studentNo
+        FROM score_alert sa
+        LEFT JOIN student s ON sa.student_id = s.id
+        <where>
+            <if test="status != null">
+                AND sa.status = #{status}
+            </if>
+            <if test="alertLevel != null and alertLevel != ''">
+                AND sa.alert_level = #{alertLevel}
+            </if>
+            <if test="studentName != null and studentName != ''">
+                AND sa.student_name LIKE CONCAT('%', #{studentName}, '%')
+            </if>
+        </where>
+        ORDER BY sa.create_time DESC
+    </select>
+
+</mapper>
